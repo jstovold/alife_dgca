@@ -1,5 +1,7 @@
 # Growing Reservoirs with Developmental Graph Cellular Automata
 
+Branch created 28/10/2025 by JHS for stochastic growth of reservoirs.
+
 Code for ALIFE 2025 paper 'Growing Reservoirs with Developmental Graph Cellular Automata'.
 
 ## Installing Dependencies
