@@ -1,4 +1,5 @@
 import argparse
+import numpy as np
 from types import SimpleNamespace
 
 from measure.tasks import narmax, santa_fe
@@ -6,7 +7,7 @@ from measure.tasks import narmax, santa_fe
 from grow.runner import Runner
 from grow.reservoir import get_seed
 
-from evolve.fitness import TaskFitness, MetricFitness
+from evolve.fitness import FixedOutputFitness, TaskFitness, MetricFitness
 from evolve.mga import ChromosomalMGA, EvolvableDGCA
 
 
@@ -16,17 +17,24 @@ def run_ga(run_id: int, args: SimpleNamespace) -> None:
     conditions = {
         "max_size": args.max_size,
         "min_size": args.input_nodes + args.output_nodes + (10 if not args.order else args.order),
-        # "io_path": True
+        "io_path": True
     }
 
+    w_out = None
     if args.task:
-        fitness_fn = TaskFitness(
+        #fitness_fn = TaskFitness(
+        fitness_fn = FixedOutputFitness(
             series=narmax if args.task == "narma" else santa_fe,
             conditions=conditions,
             verbose=False,
             order=args.order,
             fixed_series=True,
         )
+
+        w_out = np.ones((1, args.output_nodes))
+        weights = np.linspace(0,1, args.output_nodes + 1)[1:]    # evenly spaced
+        w_out = w_out * weights
+
     elif args.metric:
         fitness_fn = MetricFitness(
             metric=args.metric,
@@ -36,7 +44,7 @@ def run_ga(run_id: int, args: SimpleNamespace) -> None:
     else:
         raise ValueError("Either args.task or args.metric must be set.")
 
-    reservoir = get_seed(args.input_nodes, args.output_nodes, args.n_states)
+    reservoir = get_seed(args.input_nodes, args.output_nodes, args.n_states, fixed_out = True, w_out = w_out)
     model = EvolvableDGCA(n_states=reservoir.n_states, hidden_size=64, noise=args.noise)
     runner = Runner(max_steps=100, max_size=300)
 
@@ -70,10 +78,10 @@ if __name__ == "__main__":
         "mutate_rate": 0.02,
         "cross_rate": 0.5,
         "cross_style": "cols",
-        "n_trials": 10,
-        "input_nodes": 0,
-        "output_nodes": 0,
-        "noise": .05,
+        "n_trials": 100,
+        "input_nodes": 20,
+        "output_nodes": 20,
+        "noise": 0.0, #.05,
         "order": 10,
         "task": "narma",
         "max_size": 200,

@@ -128,7 +128,7 @@ class DGCA(object):
         S_new = np.vstack((S, S))
         S_new = S_new[keep,:]
 
-        return Reservoir(A_new, S_new, res.input_nodes, res.output_nodes).no_islands()
+        return Reservoir(A_new, S_new, res.input_nodes, res.output_nodes, fixed_out = res.fixed_out, w_out = res.w_out).no_islands()
        
     def update_state(self, res: Reservoir):
         """
@@ -136,7 +136,7 @@ class DGCA(object):
         """
         G = res.get_neighbourhood(noise=self.noise)
         D = self.state_mlp.forward(G)  # N x S
-        return Reservoir(res.A, onehot(D), res.input_nodes, res.output_nodes)
+        return Reservoir(res.A, onehot(D), res.input_nodes, res.output_nodes, fixed_out = res.fixed_out, w_out = res.w_out)
 
     def step(self, res: Reservoir):
         """

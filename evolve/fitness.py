@@ -29,6 +29,57 @@ class ReservoirFitness:
         raise NotImplementedError
 
 
+class FixedOutputFitness(ReservoirFitness):
+    """
+    Fitness based on performance in a benchmark task, fixed output weights.
+    """
+
+    def __init__(self,
+                 series: callable,
+                 order: int = None,
+                 measurements: int = 5,
+                 fixed_series: bool = True,
+                 **kwargs):
+        super().__init__(high_good=False, **kwargs)  # NRMSE: lower is better
+        self.series = series
+        self.order = order
+        self.measurements = measurements
+        self.fixed_series = fixed_series
+        self.input, self.target = self.series(order=self.order)
+
+    def _generate_series(self):
+        return self.series(order=self.order) if not self.fixed_series else (self.input, self.target)
+
+    def __call__(self, res: Reservoir) -> float:
+        res_ = self._prepare_reservoir(res)
+
+        if res_ is None:
+            return np.nan
+
+        errors = []
+        for _ in range(self.measurements):
+            self.input, self.target = self._generate_series()
+            res_.reset()
+            predictions = res_.bipolar().run(self.input)
+            #predictions = res_.bipolar().train(self.input, target=self.target)
+            #print(predictions)
+            try:
+                #err = min(NMSE(self.target[:, res.washout:], predictions), 1)
+                err = NMSE(self.target[:, res.washout:], predictions)
+            except Exception as _:
+                err = np.nan
+            #raise Exception('exit')
+            errors.append(err)
+
+        valid_errors = [e for e in errors if not np.isnan(e)]
+        final_err = np.nanmean(valid_errors) if valid_errors else np.nan
+
+        if self.verbose:
+            print(f'Skipped {self.skip_count}')
+
+        self.skip_count = 0
+        return final_err
+
 class TaskFitness(ReservoirFitness):
     """
     Fitness based on performance in a benchmark task.

@@ -26,7 +26,7 @@ def linear(x):
 def tanh(x):
     return np.tanh(x)
 
-ACTIVATION_TABLE = np.array([tanh, tanh, linear])
+ACTIVATION_TABLE = np.array([tanh, tanh, tanh]) #linear])
 
 
 def check_conditions(res: 'Reservoir',
@@ -89,7 +89,9 @@ def dfs_directed(A: np.ndarray, current: int, visited: set) -> bool:
 
 def get_seed(input_nodes: int, 
              output_nodes: int, 
-             n_states: int) -> 'Reservoir':
+             n_states: int,
+             fixed_out = False,
+             w_out = None) -> 'Reservoir':
     
     if input_nodes or output_nodes:
         n_nodes = input_nodes + output_nodes + 1
@@ -108,7 +110,7 @@ def get_seed(input_nodes: int,
         A = np.array([[0]])
         S = np.zeros((1, n_states), dtype=int)  
         S[0, 0] = 1
-    return Reservoir(A, S, input_nodes=input_nodes, output_nodes=output_nodes)
+    return Reservoir(A, S, input_nodes=input_nodes, output_nodes=output_nodes, fixed_out = fixed_out, w_out = w_out)
 
 
 class Reservoir(GraphDef):
@@ -121,7 +123,11 @@ class Reservoir(GraphDef):
                  output_dims: int=1,
                  input_gain=0.1, 
                  feedback_gain=0.95, 
-                 washout=20):   
+                 washout=20,
+                 fixed_in = False,
+                 fixed_out = False,
+                 w_in = None,
+                 w_out = None):
         super().__init__(A, S)
         self.input_nodes = input_nodes  # number of fixed I/O nodes
         self.output_nodes = output_nodes 
@@ -134,6 +140,16 @@ class Reservoir(GraphDef):
         self.washout = washout
         
         self.node_importance = None
+        self.fixed_in  = fixed_in
+        self.fixed_out = fixed_out
+
+        if fixed_in and w_in is not None:
+            self.w_in = w_in
+            self.fixed_in = True
+
+        if fixed_out and w_out is not None:
+            self.w_out = w_out
+            self.fixed_out = True
 
         self.reset()
 
@@ -281,13 +297,13 @@ class Reservoir(GraphDef):
         states_from = node_states[rows]
         states_to = node_states[cols]
         if len(states_to) == 0 or len(states_from) == 0:
-            return Reservoir(self.A, self.S, self.input_nodes, self.output_nodes)
+            return Reservoir(self.A, self.S, self.input_nodes, self.output_nodes, fixed_out = self.fixed_out, w_out = self.w_out)
         # vectorize to weights
         new_weights = POLARITY_MATRIX[states_from, states_to]
 
         A_new = np.zeros_like(self.A)
         A_new[rows, cols] = new_weights  
-        return Reservoir(A_new, self.S, self.input_nodes, self.output_nodes)
+        return Reservoir(A_new, self.S, self.input_nodes, self.output_nodes, fixed_out = self.fixed_out, w_out = self.w_out)
     
     def no_islands(self) -> 'Reservoir':
         """
@@ -318,7 +334,7 @@ class Reservoir(GraphDef):
     
         final_A = self.A[reachable_mask][:, reachable_mask]
         final_S = self.S[reachable_mask]
-        return Reservoir(final_A, final_S, self.input_nodes, self.output_nodes)
+        return Reservoir(final_A, final_S, self.input_nodes, self.output_nodes, fixed_out = self.fixed_out, w_out = self.w_out)
 
     def train(self, input: np.ndarray, target: np.ndarray):
         """
@@ -408,12 +424,19 @@ class Reservoir(GraphDef):
  
     def reset(self, state_dim: int=2000):
         self.reservoir_state = np.zeros((self.size(), state_dim))
-        self.w_in = np.random.randint(-1, 2, (self.input_dims, self.size()))
-        # self.w_in = np.random.uniform(-1, 1, (self.input_dims, self.size()))
-        # masking input nodes
-        if self.input_nodes:
-            self.w_in[:, self.input_nodes:] = 0 
-        self.w_out = np.zeros((self.output_dims, self.output_nodes if self.output_nodes else self.size()))
+        if self.fixed_in:
+            size_diff = self.size() - self.w_in.shape[1]
+            if size_diff > 0:
+                np.pad(self.w_in, ((0,0),(0, size_diff)))    # pad weight matrix to match number of nodes in reservoir
+        else:
+            self.w_in = np.random.randint(-1, 2, (self.input_dims, self.size()))
+            # self.w_in = np.random.uniform(-1, 1, (self.input_dims, self.size()))
+            # masking input nodes
+            if self.input_nodes:
+                self.w_in[:, self.input_nodes:] = 0 
+
+        if not self.fixed_out:    # w_out *shouldn't* need padding...
+            self.w_out = np.zeros((self.output_dims, self.output_nodes if self.output_nodes else self.size()))
        
     def no_selfloops(self) -> 'Reservoir':
         """
@@ -422,7 +445,7 @@ class Reservoir(GraphDef):
         out_A = self.A.copy()
         # set values on the diagonal to zero
         out_A[np.eye(out_A.shape[0], dtype=np.bool_)] = 0 
-        return Reservoir(out_A, np.copy(self.S), self.input_nodes, self.output_nodes)
+        return Reservoir(out_A, np.copy(self.S), self.input_nodes, self.output_nodes, fixed_out = self.fixed_out, w_out = self.w_out)
     
     def prune(self, idx: int) -> "Reservoir":
         """
@@ -460,12 +483,14 @@ class Reservoir(GraphDef):
             input_gain=self.input_gain,
             feedback_gain=self.feedback_gain,
             washout=self.washout,
+            fixed_out = self.fixed_out,
+            w_out = self.w_out
         )
 
         return pruned
 
     def copy(self):
-        return Reservoir(np.copy(self.A), np.copy(self.S), self.input_nodes, self.output_nodes)
+        return Reservoir(np.copy(self.A), np.copy(self.S), self.input_nodes, self.output_nodes, fixed_out = self.fixed_out, w_out = self.w_out)
 
     @classmethod
     def from_json(cls, payload) -> "Reservoir":
