@@ -33,7 +33,7 @@ def kernel_rank(res: Reservoir,
     """
     # generate random input signal in [-1, 1]
     ui = 2 * np.random.rand(num_timesteps) - 1
-    input = np.tile(ui[:, None], (1, res.input_units)).T.astype(np.float64)
+    input = np.tile(ui[:, None], (1, res.input_dims)).T.astype(np.float64)
 
     res.reset()
     _ = res.run(input)
@@ -49,7 +49,7 @@ def generalization_rank(res: Reservoir,
     Computes the Magnitude Generalizationr Rank (MGR).
     """
     # generate random input signal in [0.45, 0.55]
-    input = 0.5 + 0.1 * np.random.rand(res.input_units, num_timesteps) - 0.05
+    input = 0.5 + 0.1 * np.random.rand(res.input_dims, num_timesteps) - 0.05
 
     res.reset()
     _ = res.run(input)

@@ -1,0 +1,29 @@
+[workspace]
+channels = ["conda-forge"]
+name = "alife_dgca"
+platforms = ["osx-arm64"]
+version = "0.1.0"
+
+[tasks]
+
+[dependencies]
+python = "3.10.*"
+graph-tool = "*"
+tqdm = "*"
+numpy = "*"
+pandas = "*"
+pyarrow = "*"
+scikit-learn = "*"
+jsonpickle = "*"
+plotnine = "*"
+networkx = "*"
+parallel = "*"
+
+[pypi-dependencies]
+wrapt-timeout-decorator = "*"
+multiset = "*"
+reservoirpy = "*"
+igraph = "*"
+
+[environments]
+dgca-tasks = { features = [], no-default-feature = true }

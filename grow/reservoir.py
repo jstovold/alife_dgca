@@ -117,8 +117,8 @@ class Reservoir(GraphDef):
                  S: np.ndarray, 
                  input_nodes: int=0, 
                  output_nodes: int=0, 
-                 input_units: int=1,
-                 output_units: int=1,
+                 input_dims: int=1,
+                 output_dims: int=1,
                  input_gain=0.1, 
                  feedback_gain=0.95, 
                  washout=20):   
@@ -126,8 +126,8 @@ class Reservoir(GraphDef):
         self.input_nodes = input_nodes  # number of fixed I/O nodes
         self.output_nodes = output_nodes 
 
-        self.input_units = input_units
-        self.output_units = output_units
+        self.input_dims = input_dims
+        self.output_dims = output_dims
 
         self.input_gain = input_gain
         self.feedback_gain = feedback_gain
@@ -408,12 +408,12 @@ class Reservoir(GraphDef):
  
     def reset(self, state_dim: int=2000):
         self.reservoir_state = np.zeros((self.size(), state_dim))
-        self.w_in = np.random.randint(-1, 2, (self.input_units, self.size()))
-        # self.w_in = np.random.uniform(-1, 1, (self.input_units, self.size()))
+        self.w_in = np.random.randint(-1, 2, (self.input_dims, self.size()))
+        # self.w_in = np.random.uniform(-1, 1, (self.input_dims, self.size()))
         # masking input nodes
         if self.input_nodes:
             self.w_in[:, self.input_nodes:] = 0 
-        self.w_out = np.zeros((self.output_units, self.output_nodes if self.output_nodes else self.size()))
+        self.w_out = np.zeros((self.output_dims, self.output_nodes if self.output_nodes else self.size()))
        
     def no_selfloops(self) -> 'Reservoir':
         """
@@ -455,8 +455,8 @@ class Reservoir(GraphDef):
             S_new,
             input_nodes=input_nodes,
             output_nodes=output_nodes,
-            input_units=self.input_units,
-            output_units=self.output_units,
+            input_dims=self.input_dims,
+            output_dims=self.output_dims,
             input_gain=self.input_gain,
             feedback_gain=self.feedback_gain,
             washout=self.washout,
@@ -512,8 +512,8 @@ class Reservoir(GraphDef):
             S,
             input_nodes=payload.get("input_nodes", 0),
             output_nodes=payload.get("output_nodes", 0),
-            input_units=payload.get("input_units", 1),
-            output_units=payload.get("output_units", 1),
+            input_dims=payload.get("input_dims", 1),
+            output_dims=payload.get("output_dims", 1),
             input_gain=payload.get("input_gain", 0.1),
             feedback_gain=payload.get("feedback_gain", 0.95),
             washout=payload.get("washout", 20),

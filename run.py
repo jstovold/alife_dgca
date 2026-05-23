@@ -56,7 +56,7 @@ def run_ga(run_id: int, args: SimpleNamespace) -> None:
         n_reps_if_noisy=args.n_reps_if_noisy
     )
 
-    mga.run()
+    mga.run(progress=False)
     print(f"Completed GA run {run_id}.")
 
 
@@ -70,7 +70,7 @@ if __name__ == "__main__":
         "mutate_rate": 0.02,
         "cross_rate": 0.5,
         "cross_style": "cols",
-        "n_trials": 1000,
+        "n_trials": 10,
         "input_nodes": 0,
         "output_nodes": 0,
         "noise": .05,

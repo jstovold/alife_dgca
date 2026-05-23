@@ -6,3 +6,7 @@ __pycache__/
 
 data/
 analyse/
+
+# pixi environments
+.pixi/*
+!.pixi/config.toml
